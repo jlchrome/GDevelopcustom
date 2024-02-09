@@ -9,10 +9,11 @@ const client = axios.create({
   baseURL: GDevelopShopApi.baseUrl,
 });
 
-type StripePrice = {|
+type StripeAndPaypalPrice = {|
   value: number,
-  name: 'default',
+  name: string,
   stripePriceId: string,
+  currency?: 'USD' | 'EUR',
 |};
 
 type ProductListingData = {|
@@ -30,8 +31,8 @@ type ProductListingData = {|
   includedListableProductIds?: string[],
 |};
 
-type StripeProductAttributes = {|
-  prices: StripePrice[],
+type StripeAndPaypalSellableAttributes = {|
+  prices: StripeAndPaypalPrice[],
   sellerStripeAccountId: string,
   stripeProductId: string,
 |};
@@ -42,14 +43,9 @@ type AppStoreProductAttributes = {|
   appStoreThumbnailUrls?: string[] | null,
 |};
 
-type PaypalProductAttributes = {|
-  paypalProductId: string,
-  paypalPriceInUsd: number,
-|};
-
 export type PrivateAssetPackListingData = {|
   ...ProductListingData,
-  ...StripeProductAttributes,
+  ...StripeAndPaypalSellableAttributes,
   ...AppStoreProductAttributes,
   productType: 'ASSET_PACK',
   listing: 'ASSET_PACK',
@@ -57,7 +53,7 @@ export type PrivateAssetPackListingData = {|
 
 export type PrivateGameTemplateListingData = {|
   ...ProductListingData,
-  ...StripeProductAttributes,
+  ...StripeAndPaypalSellableAttributes,
   ...AppStoreProductAttributes,
   productType: 'GAME_TEMPLATE',
   listing: 'GAME_TEMPLATE',
@@ -65,8 +61,8 @@ export type PrivateGameTemplateListingData = {|
 
 export type CreditsPackageListingData = {|
   ...ProductListingData,
-  ...StripeProductAttributes,
-  ...PaypalProductAttributes,
+  ...StripeAndPaypalSellableAttributes,
+  ...AppStoreProductAttributes,
   productType: 'CREDITS_PACKAGE',
   listing: 'CREDITS_PACKAGE',
 |};
@@ -246,65 +242,39 @@ export const isProductAuthorizedResourceUrl = (url: string): boolean =>
   isPrivateAssetResourceAuthorizedUrl(url) ||
   isPrivateGameTemplateResourceAuthorizedUrl(url);
 
-export const extractFilenameWithExtensionFromProductAuthorizedUrl = (
-  url: string
+export const extractDecodedFilenameWithExtensionFromProductAuthorizedUrl = (
+  productAuthorizedUrl: string
 ): string => {
-  const urlWithoutQueryParams = url.split('?')[0];
-  const filenameWithExtension = path.basename(urlWithoutQueryParams);
-  return filenameWithExtension;
-};
-
-export const getStripeCheckoutUrl = async (
-  getAuthorizationHeader: () => Promise<string>,
-  {
-    priceName,
-    productId,
-    userId,
-    customerEmail,
-    password,
-  }: {|
-    priceName: string,
-    productId: string,
-    userId: string,
-    customerEmail: string,
-    password?: string,
-  |}
-): Promise<string> => {
-  const authorizationHeader = await getAuthorizationHeader();
-  const response = await client.post(
-    '/purchase/action/create-stripe-checkout-session',
-    {
-      priceName,
-      productId,
-      customerEmail,
-      password,
-    },
-    {
-      headers: { Authorization: authorizationHeader },
-      params: { userId },
-    }
+  const urlWithoutQueryParams = productAuthorizedUrl.split('?')[0];
+  const decodedFilenameWithExtension = decodeURIComponent(
+    path.basename(urlWithoutQueryParams)
   );
-  if (!response.data) throw new Error('Could not create the checkout session.');
-  if (!response.data.sessionUrl)
-    throw new Error('Could not find the session url.');
-  return response.data.sessionUrl;
+  return decodedFilenameWithExtension;
 };
 
-export const getCreditsRedirectToCheckoutUrl = ({
-  creditsPackageId,
+export const getPurchaseCheckoutUrl = ({
+  productId,
+  priceName,
   userId,
   userEmail,
+  password,
 }: {|
-  creditsPackageId: string,
+  productId: string,
+  priceName: string,
   userId: string,
   userEmail: string,
+  password?: string,
 |}): string => {
   const url = new URL(
-    `${GDevelopShopApi.baseUrl}/credits-package/action/redirect-to-checkout`
+    `${GDevelopShopApi.baseUrl}/purchase/action/redirect-to-checkout`
   );
-  url.searchParams.set('creditsPackageId', creditsPackageId);
+
+  url.searchParams.set('productId', productId);
+  url.searchParams.set('priceName', priceName);
   url.searchParams.set('userId', userId);
   url.searchParams.set('customerEmail', userEmail);
+  if (password) url.searchParams.set('password', password);
+
   return url.toString();
 };
 

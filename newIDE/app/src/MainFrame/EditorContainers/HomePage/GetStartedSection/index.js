@@ -36,6 +36,7 @@ import RecommendationList from './RecommendationList';
 import ErrorBoundary from '../../../../UI/ErrorBoundary';
 import { delay } from '../../../../Utils/Delay';
 import { type AuthError } from '../../../../Utils/GDevelopServices/Authentication';
+import { type SubscriptionPlanWithPricingSystems } from '../../../../Utils/GDevelopServices/Usage';
 import { AnnouncementsFeed } from '../../../../AnnouncementsFeed';
 import Checkbox from '../../../../UI/Checkbox';
 import { getGetStartedSectionViewCount } from '../../../../Utils/Analytics/LocalStats';
@@ -90,6 +91,7 @@ type Props = {|
   onUserSurveyStarted: () => void,
   onUserSurveyHidden: () => void,
   selectInAppTutorial: (tutorialId: string) => void,
+  subscriptionPlansWithPricingSystems: ?(SubscriptionPlanWithPricingSystems[]),
 |};
 
 const GetStartedSection = ({
@@ -97,15 +99,22 @@ const GetStartedSection = ({
   selectInAppTutorial,
   onUserSurveyStarted,
   onUserSurveyHidden,
+  subscriptionPlansWithPricingSystems,
 }: Props) => {
   const isFillingOutSurvey = hasStartedUserSurvey();
   const isOnline = useOnlineStatus();
   const authenticatedUser = React.useContext(AuthenticatedUserContext);
+  const [
+    isLoggingInUsingProvider,
+    setIsLoggingInUsingProvider,
+  ] = React.useState<boolean>(false);
   const {
     profile,
     onResetPassword,
     creatingOrLoggingInAccount,
     onLogin,
+    onLoginWithProvider,
+    onCancelLogin,
     onEditProfile,
     onCreateAccount,
     authenticationError,
@@ -198,6 +207,18 @@ const GetStartedSection = ({
     }
   };
 
+  const loginWithProvider = React.useCallback(
+    async provider => {
+      try {
+        setIsLoggingInUsingProvider(true);
+        await onLoginWithProvider(provider);
+      } finally {
+        setIsLoggingInUsingProvider(false);
+      }
+    },
+    [onLoginWithProvider]
+  );
+
   React.useEffect(
     () => {
       if (step === 'welcome' && profile && profile.survey) {
@@ -270,7 +291,31 @@ const GetStartedSection = ({
           justifyContent="center"
           alignItems="center"
         >
-          <CircularProgress size={40} />
+          <ColumnStackLayout
+            noMargin
+            expand
+            justifyContent="center"
+            alignItems="center"
+          >
+            <CircularProgress size={40} />
+          </ColumnStackLayout>
+          {isLoggingInUsingProvider && (
+            <div style={styles.bottomPageButtonContainer}>
+              <Column>
+                <LineStackLayout
+                  expand
+                  justifyContent="center"
+                  alignItems="center"
+                >
+                  <FlatButton
+                    primary
+                    label={<Trans>Cancel</Trans>}
+                    onClick={onCancelLogin}
+                  />
+                </LineStackLayout>
+              </Column>
+            </div>
+          )}
         </ColumnStackLayout>
       </SectionContainer>
     );
@@ -348,7 +393,7 @@ const GetStartedSection = ({
             justifyContent="center"
           >
             <Text size="title" align="center">
-              <Trans>Log in to Gdevelop</Trans>
+              <Trans>Log in to GDevelop</Trans>
             </Text>
             <BackgroundText>
               <Trans>
@@ -362,10 +407,12 @@ const GetStartedSection = ({
                 password={password}
                 onChangePassword={setPassword}
                 onLogin={doLogin}
+                onLoginWithProvider={loginWithProvider}
                 loginInProgress={creatingOrLoggingInAccount}
                 onForgotPassword={onResetPassword}
                 error={error}
               />
+              {/* TODO: Add button to cancel login with providers */}
             </div>
           </ColumnStackLayout>
           <div style={styles.bottomPageButtonContainer}>
@@ -421,6 +468,7 @@ const GetStartedSection = ({
               <CreateAccountForm
                 email={email}
                 onChangeEmail={setEmail}
+                onLoginWithProvider={loginWithProvider}
                 password={password}
                 onChangePassword={setPassword}
                 username={username}
@@ -610,7 +658,7 @@ const GetStartedSection = ({
   if (step === 'recommendations' && profile) {
     return (
       <>
-        <AnnouncementsFeed canClose level="urgent" addMargins />
+        <AnnouncementsFeed canClose level="urgent" addMargins hideLoader />
         <SectionContainer
           title={
             profile.username ? (
@@ -625,6 +673,9 @@ const GetStartedSection = ({
           <RecommendationList
             authenticatedUser={authenticatedUser}
             selectInAppTutorial={selectInAppTutorial}
+            subscriptionPlansWithPricingSystems={
+              subscriptionPlansWithPricingSystems
+            }
           />
         </SectionContainer>
       </>

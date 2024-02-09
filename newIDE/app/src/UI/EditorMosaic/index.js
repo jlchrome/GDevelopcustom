@@ -245,6 +245,7 @@ type Props = {|
 
 type State = {|
   mosaicNode: ?EditorMosaicNode,
+  collapsedEditorSize: Map<string, number>,
 |};
 
 /**
@@ -256,6 +257,7 @@ type State = {|
 export default class EditorMosaic extends React.Component<Props, State> {
   state = {
     mosaicNode: this.props.initialNodes,
+    collapsedEditorSize: new Map<string, number>(),
   };
 
   toggleEditor = (
@@ -282,11 +284,18 @@ export default class EditorMosaic extends React.Component<Props, State> {
     const editor = this.props.editors[editorName];
     if (!editor) return false;
 
+    const nodeSize = getNodeSize(this.state.mosaicNode, editorName);
+    if (nodeSize > 0) {
+      this.state.collapsedEditorSize.set(
+        editorName,
+        getNodeSize(this.state.mosaicNode, editorName)
+      );
+    }
     this._onChanged(resizeNode(this.state.mosaicNode, editorName, 0));
     return true;
   };
 
-  uncollapseEditor = (editorName: string, splitPercentage: number) => {
+  uncollapseEditor = (editorName: string, defaultSplitPercentage: number) => {
     const editor = this.props.editors[editorName];
     if (!editor) return false;
 
@@ -295,7 +304,11 @@ export default class EditorMosaic extends React.Component<Props, State> {
     }
 
     this._onChanged(
-      resizeNode(this.state.mosaicNode, editorName, splitPercentage)
+      resizeNode(
+        this.state.mosaicNode,
+        editorName,
+        this.state.collapsedEditorSize.get(editorName) || defaultSplitPercentage
+      )
     );
     return true;
   };

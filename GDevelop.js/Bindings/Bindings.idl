@@ -63,6 +63,14 @@ interface MapStringString {
     [Value] VectorString MAP_keys();
 };
 
+interface MapStringVectorString {
+    void MapStringVectorString();
+
+    [Const, Ref] VectorString MAP_get([Const] DOMString name);
+    boolean MAP_has([Const] DOMString name);
+    [Value] VectorString MAP_keys();
+};
+
 interface MapStringBoolean {
     void MapStringBoolean();
 
@@ -909,6 +917,8 @@ interface Layer {
     [Const, Ref] DOMString GetName();
     void SetRenderingType([Const] DOMString renderingType);
     [Const, Ref] DOMString GetRenderingType();
+    void SetCameraType([Const] DOMString cameraType);
+    [Const, Ref] DOMString GetCameraType();
     void SetVisibility(boolean visible);
     boolean GetVisibility();
     void SetLocked(boolean isLocked);
@@ -957,9 +967,13 @@ interface PropertyDescriptor {
     [Ref] PropertyDescriptor SetExtraInfo([Const, Ref] VectorString info);
     [Ref] VectorString GetExtraInfo();
     [Ref] PropertyDescriptor SetHidden(boolean enable);
+    boolean IsHidden();
+    [Ref] PropertyDescriptor SetDeprecated(boolean enable);
+    boolean IsDeprecated();
+    [Ref] PropertyDescriptor SetAdvanced(boolean enable);
+    boolean IsAdvanced();
     [Const, Ref] MeasurementUnit GetMeasurementUnit();
     [Ref] PropertyDescriptor SetMeasurementUnit([Const, Ref] MeasurementUnit measurementUnit);
-    boolean IsHidden();
 
     void SerializeTo([Ref] SerializerElement element);
     void UnserializeFrom([Const, Ref] SerializerElement element);
@@ -1117,6 +1131,11 @@ interface JsonResource {
 };
 JsonResource implements Resource;
 
+interface SpineResource {
+    void SpineResource();
+};
+SpineResource implements JsonResource;
+
 interface TilemapResource {
     void TilemapResource();
 };
@@ -1131,6 +1150,11 @@ interface Model3DResource {
     void Model3DResource();
 };
 Model3DResource implements Resource;
+
+interface AtlasResource {
+    void AtlasResource();
+};
+AtlasResource implements Resource;
 
 interface InitialInstance {
     void InitialInstance();
@@ -1300,7 +1324,7 @@ interface Serializer {
 interface ObjectAssetSerializer {
     void STATIC_SerializeTo([Ref] Project project, [Const, Ref] gdObject obj,
         [Const] DOMString objectFullName, [Ref] SerializerElement element,
-        [Ref] MapStringString resourcesNewFileNames);
+        [Ref] MapStringVectorString resourcesNewFileNames);
 };
 
 interface InstructionsList {
@@ -1834,6 +1858,9 @@ interface BehaviorMetadata {
 
     [Ref] Behavior Get();
     BehaviorsSharedData GetSharedDataInstance();
+    
+    [Value] MapStringPropertyDescriptor GetProperties();
+    [Value] MapStringPropertyDescriptor GetSharedProperties();
 };
 
 interface EffectMetadata {
@@ -1939,22 +1966,11 @@ interface PlatformExtension {
         Behavior instance,
         BehaviorsSharedData sharedDatasInstance);
 
-    [Ref] BehaviorMetadata AddEventsBasedBehavior([Const] DOMString name,
-        [Const] DOMString fullname,
-        [Const] DOMString description,
-        [Const] DOMString group,
-        [Const] DOMString icon24x24);
-
     [Ref] ObjectMetadata WRAPPED_AddObject([Const] DOMString name,
         [Const] DOMString fullname,
         [Const] DOMString description,
         [Const] DOMString icon24x24,
         ObjectConfiguration instance);
-
-    [Ref] ObjectMetadata AddEventsBasedObject([Const] DOMString name,
-        [Const] DOMString fullname,
-        [Const] DOMString description,
-        [Const] DOMString icon24x24);
 
     [Ref] EffectMetadata AddEffect([Const] DOMString name);
 
@@ -3206,6 +3222,35 @@ interface Model3DObjectConfiguration {
 };
 Model3DObjectConfiguration implements ObjectConfiguration;
 
+
+interface SpineAnimation {
+    void SpineAnimation();
+
+    void SetName([Const] DOMString name);
+    [Const, Ref] DOMString GetName();
+
+    void SetSource([Const] DOMString name);
+    [Const, Ref] DOMString GetSource();
+
+    void SetShouldLoop(boolean shouldLoop);
+    boolean ShouldLoop();
+};
+
+interface SpineObjectConfiguration {
+    void SpineObjectConfiguration();
+
+    void AddAnimation([Const, Ref] SpineAnimation animation);
+    [Ref] SpineAnimation GetAnimation(unsigned long index);
+    boolean HasAnimationNamed([Const] DOMString name);
+    unsigned long GetAnimationsCount();
+    void RemoveAnimation(unsigned long index);
+    void RemoveAllAnimations();
+    boolean HasNoAnimations();
+    void SwapAnimations(unsigned long first, unsigned long second);
+    void MoveAnimation(unsigned long oldIndex, unsigned long newIndex);
+};
+SpineObjectConfiguration implements ObjectConfiguration;
+
 interface Vector2f {
     void Vector2f();
 
@@ -3230,8 +3275,8 @@ interface VectorVector2f {
 interface TextObject {
     void TextObject();
 
-    void SetString([Const] DOMString string);
-    [Const, Ref] DOMString GetString();
+    void SetText([Const] DOMString string);
+    [Const, Ref] DOMString GetText();
     void SetCharacterSize(double size);
     double GetCharacterSize();
     void SetFontName([Const] DOMString string);
@@ -3242,12 +3287,30 @@ interface TextObject {
     void SetItalic(boolean enable);
     boolean IsUnderlined();
     void SetUnderlined(boolean enable);
-    void SetColor(unsigned long r, unsigned long g, unsigned long b);
-    unsigned long GetColorR();
-    unsigned long GetColorG();
-    unsigned long GetColorB();
+    void SetColor([Const] DOMString color);
+    [Const, Ref] DOMString GetColor();
     void SetTextAlignment([Const] DOMString textAlignment);
     [Const, Ref] DOMString GetTextAlignment();
+
+    void SetOutlineEnabled(boolean enable);
+    boolean IsOutlineEnabled();
+    void SetOutlineThickness(double value);
+    double GetOutlineThickness();
+    void SetOutlineColor([Const] DOMString color);
+    [Const, Ref] DOMString GetOutlineColor();
+
+    void SetShadowEnabled(boolean enable);
+    boolean IsShadowEnabled();
+    void SetShadowColor([Const] DOMString color);
+    [Const, Ref] DOMString GetShadowColor();
+    void SetShadowOpacity(double value);
+    double GetShadowOpacity();
+    void SetShadowAngle(double value);
+    double GetShadowAngle();
+    void SetShadowDistance(double value);
+    double GetShadowDistance();
+    void SetShadowBlurRadius(double value);
+    double GetShadowBlurRadius();
 };
 TextObject implements ObjectConfiguration;
 

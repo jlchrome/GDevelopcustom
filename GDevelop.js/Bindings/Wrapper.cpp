@@ -110,6 +110,8 @@
 #include "../../Extensions/TextEntryObject/TextEntryObject.h"
 #include "../../Extensions/TextObject/TextObject.h"
 #include "../../Extensions/TiledSpriteObject/TiledSpriteObject.h"
+#include "../../Extensions/3D/Model3DObjectConfiguration.h"
+#include "../../Extensions/Spine/SpineObjectConfiguration.h"
 #include "BehaviorJsImplementation.h"
 #include "BehaviorSharedDataJsImplementation.h"
 #include "ObjectJsImplementation.h"
@@ -419,6 +421,7 @@ typedef std::vector<std::pair<gd::String, TextFormatting>>
     VectorPairStringTextFormatting;
 typedef std::vector<gd::ObjectGroup> VectorObjectGroup;
 typedef std::map<gd::String, gd::String> MapStringString;
+typedef std::map<gd::String, std::vector<gd::String>> MapStringVectorString;
 typedef std::map<gd::String, bool> MapStringBoolean;
 typedef std::map<gd::String, double> MapStringDouble;
 typedef std::map<gd::String, gd::ExpressionMetadata>

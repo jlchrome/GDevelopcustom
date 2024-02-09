@@ -19,7 +19,7 @@ import { serializeToObjectAsset } from '../Utils/Serializer';
 import { showErrorBox } from '../UI/Messages/MessageBox';
 import { downloadUrlsToBlobs, type ItemResult } from '../Utils/BlobDownloader';
 import { useGenericRetryableProcessWithProgress } from '../Utils/UseGenericRetryableProcessWithProgress';
-import { extractFilenameFromProjectResourceUrl } from '../Utils/GDevelopServices/Project';
+import { extractDecodedFilenameFromProjectResourceUrl } from '../Utils/GDevelopServices/Project';
 import {
   archiveFiles,
   type BlobFileDescriptor,
@@ -79,7 +79,7 @@ export const downloadResourcesAsBlobs = async ({
         return {
           resource,
           url: resourceFile,
-          filename: extractFilenameFromProjectResourceUrl(resourceFile),
+          filename: extractDecodedFilenameFromProjectResourceUrl(resourceFile),
         };
       }
     )
@@ -127,7 +127,7 @@ const zipAssets = async (
     options: DownloadResourcesAsBlobsOptionsWithoutProgress
   ) => Promise<void>
 ): Promise<Blob | null> => {
-  const blobFiles: Array<BlobFileDescriptor> = [];
+  const blobFiles = new Map<string, BlobFileDescriptor>();
   const textFiles: Array<TextFileDescriptor> = [];
 
   try {
@@ -156,7 +156,7 @@ const zipAssets = async (
         /**
          * The map from project resource file paths to asset resource file paths.
          */
-        const resourceFileRenamingMap = new gd.MapStringString();
+        const resourceFileRenamingMap = new Map<string, Array<string>>();
         const serializedObject = serializeToObjectAsset(
           project,
           object,
@@ -170,10 +170,13 @@ const zipAssets = async (
           if (!resourceFileRenamingMap.has(resource.getFile())) {
             continue;
           }
-          const resourceFile = resourceFileRenamingMap.get(resource.getFile());
-          blobFiles.push({ filePath: resourceFile, blob });
+          const resourceFiles = resourceFileRenamingMap.get(resource.getFile());
+          if (resourceFiles) {
+            for (const resourceFile of resourceFiles) {
+              blobFiles.set(resourceFile, { filePath: resourceFile, blob });
+            }
+          }
         }
-        resourceFileRenamingMap.delete();
 
         textFiles.push({
           text: JSON.stringify(serializedObject, null, 2),
@@ -184,7 +187,7 @@ const zipAssets = async (
 
     const zippedAssetsBlob = await archiveFiles({
       textFiles,
-      blobFiles,
+      blobFiles: [...blobFiles.values()],
       basePath: '',
       onProgress: (count: number, total: number) => {},
     });

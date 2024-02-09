@@ -126,18 +126,25 @@ describe('gdjs.TweenRuntimeBehavior', () => {
           name: behaviorName,
         },
       ],
-      characterSize: 20,
-      font: '',
-      bold: false,
-      italic: false,
-      underlined: false,
-      color: {
-        r: 0,
-        g: 0,
-        b: 0,
+      content: {
+        characterSize: 20,
+        font: '',
+        bold: false,
+        italic: false,
+        underlined: false,
+        color: '0;0;0',
+        text: '',
+        textAlignment: 'left',
+        isOutlineEnabled: false,
+        outlineThickness: 2,
+        outlineColor: '255;255;255',
+        isShadowEnabled: false,
+        shadowColor: '0;0;0',
+        shadowOpacity: 128,
+        shadowDistance: 4,
+        shadowAngle: 90,
+        shadowBlurRadius: 2,
       },
-      string: '',
-      textAlignment: 'left',
     });
     runtimeScene.addObject(object);
     return object;
@@ -629,6 +636,53 @@ describe('gdjs.TweenRuntimeBehavior', () => {
     expect(sprite.getY()).to.be(400);
   });
 
+  it('can tween the scale on X axis to 0', () => {
+    sprite.setPosition(100, 400);
+    sprite.setScaleX(1);
+    spriteBehavior.addObjectScaleTween3(
+      'MyTween',
+      0,
+      'linear',
+      0.25,
+      false,
+      false
+    );
+    // The interpolation is exponential.
+    // It would need an infinite speed to go away from 0.
+    // This is why the scale is set to 0 directly.
+    for (let i = 0; i < 11; i++) {
+      runtimeScene.renderAndStep(1000 / 60);
+      expect(sprite.getScaleX()).to.be(0);
+    }
+    expect(spriteBehavior.hasFinished('MyTween')).to.be(true);
+    expect(sprite.getX()).to.be(100);
+    expect(sprite.getY()).to.be(400);
+  });
+
+  it('can tween the scale on X axis from 0', () => {
+    sprite.setPosition(100, 400);
+    sprite.setScaleX(0);
+    spriteBehavior.addObjectScaleTween3(
+      'MyTween',
+      1,
+      'linear',
+      0.25,
+      false,
+      false
+    );
+    // The interpolation is exponential.
+    // It would need an infinite speed to go away from 0.
+    // This is why the scale is set to 1 directly at the end.
+    for (let i = 0; i < 11; i++) {
+      expect(sprite.getScale()).to.be(0);
+      runtimeScene.renderAndStep(1000 / 60);
+    }
+    expect(spriteBehavior.hasFinished('MyTween')).to.be(true);
+    expect(sprite.getScaleX()).to.be(1);
+    expect(sprite.getX()).to.be(100);
+    expect(sprite.getY()).to.be(400);
+  });
+
   it('can tween the scale on X axis from center', () => {
     sprite.setPosition(100, 400);
     sprite.setScaleX(200);
@@ -661,6 +715,53 @@ describe('gdjs.TweenRuntimeBehavior', () => {
     checkProgress(6, () => sprite.getScaleY());
     // The interpolation is exponential.
     expect(sprite.getScaleY()).to.be(386.6364089863524);
+    expect(sprite.getX()).to.be(100);
+    expect(sprite.getY()).to.be(400);
+  });
+
+  it('can tween the scale on Y axis to 0', () => {
+    sprite.setPosition(100, 400);
+    sprite.setScaleY(1);
+    spriteBehavior.addObjectScaleTween3(
+      'MyTween',
+      0,
+      'linear',
+      0.25,
+      false,
+      false
+    );
+    // The interpolation is exponential.
+    // It would need an infinite speed to go away from 0.
+    // This is why the scale is set to 0 directly.
+    for (let i = 0; i < 11; i++) {
+      runtimeScene.renderAndStep(1000 / 60);
+      expect(sprite.getScaleY()).to.be(0);
+    }
+    expect(spriteBehavior.hasFinished('MyTween')).to.be(true);
+    expect(sprite.getX()).to.be(100);
+    expect(sprite.getY()).to.be(400);
+  });
+
+  it('can tween the scale on Y axis from 0', () => {
+    sprite.setPosition(100, 400);
+    sprite.setScaleY(0);
+    spriteBehavior.addObjectScaleTween3(
+      'MyTween',
+      1,
+      'linear',
+      0.25,
+      false,
+      false
+    );
+    // The interpolation is exponential.
+    // It would need an infinite speed to go away from 0.
+    // This is why the scale is set to 1 directly at the end.
+    for (let i = 0; i < 11; i++) {
+      expect(sprite.getScale()).to.be(0);
+      runtimeScene.renderAndStep(1000 / 60);
+    }
+    expect(spriteBehavior.hasFinished('MyTween')).to.be(true);
+    expect(sprite.getScaleY()).to.be(1);
     expect(sprite.getX()).to.be(100);
     expect(sprite.getY()).to.be(400);
   });
@@ -726,6 +827,53 @@ describe('gdjs.TweenRuntimeBehavior', () => {
     checkProgress(6, () => sprite.getScale());
     // The interpolation is exponential.
     expect(sprite.getScale()).to.be(386.6364089863524);
+    expect(sprite.getX()).to.be(100);
+    expect(sprite.getY()).to.be(400);
+  });
+
+  it('can tween the scale to 0', () => {
+    sprite.setPosition(100, 400);
+    sprite.setScale(1);
+    spriteBehavior.addObjectScaleTween3(
+      'MyTween',
+      0,
+      'linear',
+      0.25,
+      false,
+      false
+    );
+    // The interpolation is exponential.
+    // It would need an infinite speed to go away from 0.
+    // This is why the scale is set to 0 directly.
+    for (let i = 0; i < 11; i++) {
+      runtimeScene.renderAndStep(1000 / 60);
+      expect(sprite.getScale()).to.be(0);
+    }
+    expect(spriteBehavior.hasFinished('MyTween')).to.be(true);
+    expect(sprite.getX()).to.be(100);
+    expect(sprite.getY()).to.be(400);
+  });
+
+  it('can tween the scale from 0', () => {
+    sprite.setPosition(100, 400);
+    sprite.setScale(0);
+    spriteBehavior.addObjectScaleTween3(
+      'MyTween',
+      1,
+      'linear',
+      0.25,
+      false,
+      false
+    );
+    // The interpolation is exponential.
+    // It would need an infinite speed to go away from 0.
+    // This is why the scale is set to 1 directly at the end.
+    for (let i = 0; i < 11; i++) {
+      expect(sprite.getScale()).to.be(0);
+      runtimeScene.renderAndStep(1000 / 60);
+    }
+    expect(spriteBehavior.hasFinished('MyTween')).to.be(true);
+    expect(sprite.getScale()).to.be(1);
     expect(sprite.getX()).to.be(100);
     expect(sprite.getY()).to.be(400);
   });

@@ -17,6 +17,7 @@ import Authentication, {
   type ChangeEmailForm,
   type AuthError,
   type ForgotPasswordForm,
+  type IdentityProvider,
 } from '../Utils/GDevelopServices/Authentication';
 import { User as FirebaseUser } from 'firebase/auth';
 import LoginDialog from './LoginDialog';
@@ -53,6 +54,8 @@ import Snackbar from '@material-ui/core/Snackbar';
 import RequestDeduplicator from '../Utils/RequestDeduplicator';
 import { burstCloudProjectAutoSaveCache } from '../ProjectsStorage/CloudStorageProvider/CloudProjectOpener';
 import { extractGDevelopApiErrorStatusAndCode } from '../Utils/GDevelopServices/Errors';
+import { showErrorBox } from '../UI/Messages/MessageBox';
+import { userCancellationErrorName } from '../LoginProvider/Utils';
 
 type Props = {|
   authentication: Authentication,
@@ -117,6 +120,7 @@ export default class AuthenticatedUserProvider extends React.Component<
   };
   _automaticallyUpdateUserProfile = true;
   _hasNotifiedUserAboutEmailVerification = false;
+  _abortController: ?AbortController = null;
 
   // Cloud projects are requested in 2 different places at app opening.
   // - First one comes from user authenticating and automatically fetching
@@ -186,6 +190,8 @@ export default class AuthenticatedUserProvider extends React.Component<
       authenticatedUser: {
         ...initialAuthenticatedUser,
         onLogin: this._doLogin,
+        onLoginWithProvider: this._doLoginWithProvider,
+        onCancelLogin: this._cancelLogin,
         onLogout: this._doLogout,
         onCreateAccount: this._doCreateAccount,
         onEditProfile: this._doEdit,
@@ -729,6 +735,77 @@ export default class AuthenticatedUserProvider extends React.Component<
     });
   };
 
+  _showLoginSnackbar = (authenticatedUser: AuthenticatedUser) => {
+    const username = authenticatedUser.profile
+      ? authenticatedUser.profile.username
+      : null;
+    this.showUserSnackbar({
+      message: username ? (
+        <Trans>👋 Good to see you {username}!</Trans>
+      ) : (
+        <Trans>👋 Good to see you!</Trans>
+      ),
+    });
+  };
+
+  _doLoginWithProvider = async (provider: IdentityProvider) => {
+    const { authentication } = this.props;
+    if (!authentication) return;
+
+    this.setState({
+      loginInProgress: true,
+      apiCallError: null,
+      authenticatedUser: {
+        ...this.state.authenticatedUser,
+        creatingOrLoggingInAccount: true,
+        authenticationError: null,
+      },
+    });
+    this._automaticallyUpdateUserProfile = false;
+    try {
+      this._abortController = new AbortController();
+      await authentication.loginWithProvider({
+        provider,
+        signal: this._abortController.signal,
+      });
+      await this._fetchUserProfileWithoutThrowingErrors();
+      this.openLoginDialog(false);
+      this.openCreateAccountDialog(false);
+      this._showLoginSnackbar(this.state.authenticatedUser);
+    } catch (apiCallError) {
+      if (apiCallError.name !== userCancellationErrorName) {
+        showErrorBox({
+          rawError: apiCallError,
+          errorId: 'login-with-provider',
+          doNotReport: true,
+          message: `An error occurred while logging in with provider ${provider}. Please check your internet connection or try again later.`,
+        });
+        this.setState({
+          apiCallError,
+          authenticatedUser: {
+            ...this.state.authenticatedUser,
+            authenticationError: apiCallError,
+          },
+        });
+      }
+    }
+    this.setState({
+      loginInProgress: false,
+      authenticatedUser: {
+        ...this.state.authenticatedUser,
+        creatingOrLoggingInAccount: false,
+      },
+    });
+    this._automaticallyUpdateUserProfile = true;
+  };
+
+  _cancelLogin = () => {
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
+    }
+  };
+
   _doLogin = async (form: LoginForm) => {
     const { authentication } = this.props;
     if (!authentication) return;
@@ -747,15 +824,7 @@ export default class AuthenticatedUserProvider extends React.Component<
       await authentication.login(form);
       await this._fetchUserProfileWithoutThrowingErrors();
       this.openLoginDialog(false);
-      const profile = this.state.authenticatedUser.profile;
-      const username = profile ? profile.username : null;
-      this.showUserSnackbar({
-        message: username ? (
-          <Trans>👋 Good to see you {username}!</Trans>
-        ) : (
-          <Trans>👋 Good to see you!</Trans>
-        ),
-      });
+      this._showLoginSnackbar(this.state.authenticatedUser);
     } catch (apiCallError) {
       this.setState({
         apiCallError,
@@ -1056,9 +1125,14 @@ export default class AuthenticatedUserProvider extends React.Component<
             </AuthenticatedUserContext.Provider>
             {this.state.loginDialogOpen && (
               <LoginDialog
-                onClose={() => this.openLoginDialog(false)}
+                onClose={() => {
+                  this._cancelLogin();
+                  this.openLoginDialog(false);
+                }}
                 onGoToCreateAccount={() => this.openCreateAccountDialog(true)}
                 onLogin={this._doLogin}
+                onLogout={this._doLogout}
+                onLoginWithProvider={this._doLoginWithProvider}
                 loginInProgress={this.state.loginInProgress}
                 error={this.state.apiCallError}
                 onForgotPassword={this._doForgotPassword}
@@ -1097,6 +1171,7 @@ export default class AuthenticatedUserProvider extends React.Component<
                 onCreateAccount={form =>
                   this._doCreateAccount(form, preferences)
                 }
+                onLoginWithProvider={this._doLoginWithProvider}
                 createAccountInProgress={this.state.createAccountInProgress}
                 error={this.state.apiCallError}
               />

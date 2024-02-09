@@ -111,6 +111,7 @@ const objectTypeToDefaultName = {
   'TextInput::TextInputObject': 'NewTextInput',
   'Scene3D::Model3DObject': 'New3DModel',
   'Scene3D::Cube3DObject': 'New3DBox',
+  'SpineObject::SpineObject': 'NewSpine',
   'Video::VideoObject': 'NewVideo',
 };
 
@@ -1629,6 +1630,7 @@ const ObjectsList = React.forwardRef<Props, ObjectsListInterface>(
                       reactDndType={objectWithContextReactDndType}
                       initiallyOpenedNodeIds={initiallyOpenedNodeIds}
                       arrowKeyNavigationProps={arrowKeyNavigationProps}
+                      shouldSelectUponContextMenuOpening
                     />
                   )}
                 </AutoSizer>

@@ -129,9 +129,11 @@ const TreeViewRow = <Item: ItemBaseAttributes>(props: Props<Item>) => {
     onDrop,
     onEditItem,
     isMobileScreen,
+    shouldHideMenuIcon,
     DragSourceAndDropTarget,
     getItemHtmlId,
     forceDefaultDraggingPreview,
+    shouldSelectUponContextMenuOpening,
   } = data;
   const node = flattenedData[index];
   const left = node.depth * 16;
@@ -340,14 +342,19 @@ const TreeViewRow = <Item: ItemBaseAttributes>(props: Props<Item>) => {
                       <ArrowHeadBottom fontSize="small" />
                     )}
                   </IconButton>
-                  {!node.item.isRoot && <Folder className="folder-icon" />}
+                  {node.thumbnailSrc && node.thumbnailSrc !== 'FOLDER' ? (
+                    <div className="thumbnail">
+                      <ListIcon iconSize={20} src={node.thumbnailSrc} />
+                    </div>
+                  ) : (
+                    !node.item.isRoot && <Folder className="folder-icon" />
+                  )}
                 </>
               ) : node.thumbnailSrc ? (
                 <div className="thumbnail">
                   <ListIcon iconSize={20} src={node.thumbnailSrc} />
                 </div>
               ) : null}
-              {node.leftComponent}
               {renamedItemId === node.id && typeof node.name === 'string' ? (
                 <SemiControlledRowInput
                   initialValue={node.name}
@@ -381,6 +388,12 @@ const TreeViewRow = <Item: ItemBaseAttributes>(props: Props<Item>) => {
 
           const rightButton = node.rightButton;
 
+          const shouldDisplayMenu =
+            !shouldHideMenuIcon &&
+            !isMobileScreen &&
+            !node.item.isRoot &&
+            !node.item.isPlaceholder;
+
           const dragSource = connectDragSource(
             <div className="full-space-container">
               {isOver && whereToDrop === 'before' && (
@@ -391,30 +404,31 @@ const TreeViewRow = <Item: ItemBaseAttributes>(props: Props<Item>) => {
                 onDoubleClick={
                   onEditItem ? () => onEditItem(node.item) : undefined
                 }
-                onContextMenu={selectAndOpenContextMenu}
+                onContextMenu={
+                  shouldSelectUponContextMenuOpening
+                    ? selectAndOpenContextMenu
+                    : openContextMenu
+                }
                 {...longTouchForContextMenuProps}
               >
                 {itemRow}
-                {rightButton && (
+                {(node.rightComponent || rightButton || shouldDisplayMenu) && (
                   <div className="row-content-side row-content-side-right">
-                    <IconButton
-                      size="small"
-                      onClick={e => {
-                        e.stopPropagation();
-                        if (rightButton.click) {
-                          rightButton.click();
-                        }
-                      }}
-                    >
-                      {rightButton.icon}
-                    </IconButton>
-                  </div>
-                )}
-                {!rightButton &&
-                  !isMobileScreen &&
-                  !node.item.isRoot &&
-                  !node.item.isPlaceholder && (
-                    <div className="row-content-side row-content-side-right">
+                    {node.rightComponent}
+                    {rightButton && (
+                      <IconButton
+                        size="small"
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (rightButton.click) {
+                            rightButton.click();
+                          }
+                        }}
+                      >
+                        {rightButton.icon}
+                      </IconButton>
+                    )}
+                    {shouldDisplayMenu && (
                       <IconButton
                         size="small"
                         onClick={e => {
@@ -429,8 +443,9 @@ const TreeViewRow = <Item: ItemBaseAttributes>(props: Props<Item>) => {
                       >
                         <ThreeDotsMenu />
                       </IconButton>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                )}
               </div>
               {isOver && whereToDrop === 'after' && (
                 <DropIndicator canDrop={canDrop} />

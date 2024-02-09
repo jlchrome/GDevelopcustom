@@ -45,8 +45,9 @@ export type EventsFunctionCallbacks = {|
     eventsFunction: gdEventsFunction,
     cb: (boolean) => void
   ) => void,
-  canRename: (eventsFunction: gdEventsFunction) => boolean,
   onRenameEventsFunction: (
+    eventsBasedBehavior: ?gdEventsBasedBehavior,
+    eventsBasedObject: ?gdEventsBasedObject,
     eventsFunction: gdEventsFunction,
     newName: string,
     cb: (boolean) => void
@@ -79,6 +80,22 @@ export const getEventsFunctionTreeViewItemId = (
   return `function-${eventFunction.ptr}`;
 };
 
+export const canFunctionBeRenamed = (
+  eventsFunction: gdEventsFunction,
+  containerType: 'extension' | 'behavior' | 'object'
+) => {
+  const name = eventsFunction.getName();
+  if (containerType === 'behavior') {
+    return !gd.MetadataDeclarationHelper.isBehaviorLifecycleEventsFunction(
+      name
+    );
+  }
+  if (containerType === 'object') {
+    return !gd.MetadataDeclarationHelper.isObjectLifecycleEventsFunction(name);
+  }
+  return !gd.MetadataDeclarationHelper.isExtensionLifecycleEventsFunction(name);
+};
+
 export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
   eventsFunction: gdEventsFunction;
   props: EventsFunctionProps;
@@ -90,10 +107,6 @@ export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
 
   getEventsFunctionsContainer(): gdEventsFunctionsContainer {
     return this.props.eventsFunctionsContainer;
-  }
-
-  getFunctionInsertionIndex(): number {
-    return this.getIndex() + 1;
   }
 
   getEventsFunction(): ?gdEventsFunction {
@@ -193,6 +206,8 @@ export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
     if (this.eventsFunction.getName() === newName) return;
 
     this.props.onRenameEventsFunction(
+      this.props.eventsBasedBehavior,
+      this.props.eventsBasedObject,
       this.eventsFunction,
       newName,
       doRename => {
@@ -202,14 +217,29 @@ export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
     );
   }
 
-  edit(): void {}
+  edit(): void {
+    if (this.canBeRenamed()) {
+      this.props.editName(this.getId());
+    }
+  }
+
+  canBeRenamed() {
+    return canFunctionBeRenamed(
+      this.eventsFunction,
+      this.getEventsBasedBehavior()
+        ? 'behavior'
+        : this.getEventsBasedObject()
+        ? 'object'
+        : 'extension'
+    );
+  }
 
   buildMenuTemplate(i18n: I18nType, index: number) {
     return [
       {
         label: i18n._(t`Rename`),
-        click: () => this.props.editName(this.getId()),
-        enabled: this.props.canRename(this.eventsFunction),
+        click: () => this.edit(),
+        enabled: this.canBeRenamed(),
         accelerator: 'F2',
       },
       {
@@ -255,7 +285,7 @@ export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
     ];
   }
 
-  renderLeftComponent(i18n: I18nType): ?React.Node {
+  renderRightComponent(i18n: I18nType): ?React.Node {
     const icons = [];
     if (this.eventsFunction.isPrivate()) {
       icons.push(
@@ -265,7 +295,13 @@ export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
             <Trans>This function won't be visible in the events editor.</Trans>
           }
         >
-          <VisibilityOff fontSize="small" style={styles.tooltip} />
+          <VisibilityOff
+            fontSize="small"
+            style={{
+              ...styles.tooltip,
+              color: this.props.gdevelopTheme.text.color.disabled,
+            }}
+          />
         </Tooltip>
       );
     }
@@ -281,7 +317,13 @@ export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
             </Trans>
           }
         >
-          <AsyncIcon fontSize="small" style={styles.tooltip} />
+          <AsyncIcon
+            fontSize="small"
+            style={{
+              ...styles.tooltip,
+              color: this.props.gdevelopTheme.text.color.disabled,
+            }}
+          />
         </Tooltip>
       );
     }
@@ -290,12 +332,12 @@ export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
 
   _togglePrivate(): void {
     this.eventsFunction.setPrivate(!this.eventsFunction.isPrivate());
-    this.props.forceUpdate();
+    this.props.forceUpdateEditor();
   }
 
   _toggleAsync(): void {
     this.eventsFunction.setAsync(!this.eventsFunction.isAsync());
-    this.props.forceUpdateList();
+    this.props.forceUpdateEditor();
   }
 
   delete(): void {
@@ -423,7 +465,9 @@ export class EventsFunctionTreeViewItemContent implements TreeViewItemContent {
     this.props.forceUpdate();
   }
 
-  getRightButton() {
+  getRightButton(i18n: I18nType) {
     return null;
   }
+
+  addFunctionAtSelection(): void {}
 }
